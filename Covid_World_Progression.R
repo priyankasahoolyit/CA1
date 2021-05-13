@@ -927,11 +927,49 @@ t.test(x = cardiovasc_death_rate, alternative = "greater")
 
  
 
+#======================================================= The End =======================================================#
+names(covid_data)      
+covid_subset10 <- subset(covid_data, select = c(population, life_expectancy, human_development_index, diabetes_prevalence, cardiovasc_death_rate))
 
+sample <-covid_subset10[sample(1:nrow(covid_subset10), 10000, replace = FALSE),]
+sample
 
+pairs.panels(sample,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals  
 
       
-      
+names(covid_data)      
+covid_subset11 <- subset(covid_data, select = c(total_cases,total_deaths, stringency_index))
+
+sample <-covid_subset11[sample(1:nrow(covid_subset11), 10000, replace = FALSE),]
+sample
+
+pairs.panels(sample,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals        
       
       
       
