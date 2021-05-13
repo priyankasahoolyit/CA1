@@ -12,9 +12,9 @@ install.packages("mice")      # Install mice package and displayed the missing v
 install.packages("VIM")       # Install VIM package and displayed the missing values
 install.packages("psych")     # Install psych package to find correlations between multiple variables
 install.packages("magrittr")  # Install magrittr package are only needed the first time you use it
-#install.packages("dplyr")     # Install dplyr package to decrease development time and improve readability of code
-library(magrittr) # needs to be run every time you start R and want to use %>%
-#library(dplyr)    # alternatively, this also loads %>%
+install.packages("dplyr")     # Install dplyr package to decrease development time and improve readability of code
+library(magrittr)             # needs to be run every time you start R and want to use %>%
+library(dplyr)                # alternatively, this also loads %>%
 library(psych)
 library(VIM)
 library(ggplot2)
@@ -35,25 +35,89 @@ class(covid_data)                        # Confirm the class of covid_data
 str(covid_data)                          # Check the structure of data frame
 nrow(covid_data)                         # Count the number of rows within the covid data frame 
 
+
+
+# ------------------------------ Raw Data Visualization -----------------------------------------------#
+
+
+Deaths<-aggregate(covid_data$total_deaths~covid_data$location,covid_data,FUN = max)
+Deaths10<-Deaths[order(-Deaths$`covid_data$total_deaths`),][1:10,]
+
+Deaths10
+
+barplot(Deaths10$`covid_data$total_deaths`,names.arg = Deaths10$`covid_data$location`,
+        main="Highest covid death cases",las=3,col="red")
+
+
+
 #------------------------------ Data Preparation -----------------------------------------------#
 
 # Structure displays that there are total 84529 observations and 59 variables in the Covid dataset.
-# The datetime field is converted to a date variable in mm/dd/yyyy format from chr variable.
+# Already all the string variables are converted to Factors while reading the data into dataframe. 
+# The `date` field is in "YYYY-mm-dd" format as char type
+# converted to a `date` variable to date from char type.
 
 covid_data$date <- as.Date(covid_data$date)
-#converted_date <- format(covid_data$date, "%d/%m/%Y") # datetime variable is converted to date type and formatted
 str(covid_data$date)
 
-# Getting the total number of `NA` values to see, how many null values were there in the entire dataset.
+
+
+# ------------------------  Identifying the missing values---------------------------#
+
+# Lets find out if there are any NA's in the data
+# Using na.omit() to store any full rows into new_data frame
+
+final_df<-na.omit(covid_data)
+dim(final_df)
+final_df
+
+# It is observed that there are missing data in all the records, 
+# so na.omit() function is dropping all the rows from the data frame.
+# Hence, not an option to proceed with. 
+
+# complete.cases() returns a vector with no missing values, can be swapped by using the `!`
+# Using complete.cases() to show all complete rows store in complete_data
+# and `!` complete_cases() for missing_data accordingly.
+# Then using nrow() to show a total of all complete and missing rows
+
+complete_data<-covid_data[complete.cases(covid_data),]
+nrow(covid_data)
+missing_data<-covid_data[!complete.cases(covid_data),]
+nrow(covid_data)
+missing_rows<-nrow(complete_data) -nrow(missing_data)
+missing_rows
+
+# Here as well its evident that the none of the rows are complete out of 84529 observations. 
+
+
+# Now, getting the total number of `NA` values to see, how many null values were there in the entire dataset.
 # Finding which columns contain `NA` values
 
 sum(is.na(covid_data))                     # Count of `NA` is 2009585
 names(which(sapply(covid_data, anyNA)))    # Almost all the variables contains `NA`, 
-                                           # except `iso_code`, `location`, `date`
 
-# Viewing the records with NA
-na_records <- covid_data[!complete.cases(covid_data),]
-na_records
+
+
+# -------------------------- Data Subsetting and Imputing ---------------------------------------------#
+
+# Let's create a subset of covid_data, 
+# considering the information required for further Hypothesis testing.
+
+# Using the subset function to extract all records 
+# from covid_data where age > 35 or age < 24. and only select the listed attributes
+
+
+attach(covid_data)
+names(covid_data)
+covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"), 
+                      select = c(iso_code, 
+                                 location, 
+                                 date, 
+                                 people_fully_vaccinated, 
+                                 new_cases))
+dim(covid_subset)
+
+
 
 # The variable `new_cases` are the counts of new confirmed cases of covid-19 reported daily, country wise. 
 # So it will not be wrong to consider the null values as no new cases in the country on particular date, 
@@ -149,9 +213,31 @@ qqnorm(new_cases)
 qqline(new_cases, col = "red")
 # new_cases appears not to be normally distributed
 
+
+# This test doesnt work on dicotomous variable
+with(beavers_data, tapply(temp, activ, shapiro.test))
+
 covid_subset1 <- subset(covid_subset, select = c(people_fully_vaccinated, new_cases))
 str(covid_subset1)
 sum(is.na(covid_subset1))
+
+
+# This test doesnt work on dicotomous variable
+
+
+my_sample<- covid_subset[sample(1:nrow(covid_subset), 100, replace = FALSE),]
+my_sample
+
+my_sample <- covid_subset1[sample(1:10, 10, replace=FALSE),]
+my_sample
+
+
+with(my_sample, tapply(people_fully_vaccinated, new_cases, shapiro.test))
+
+#Error in FUN(X[[i]], ...) : sample size must be between 3 and 5000
+# put a random sample of 5000 or less then do Shapiro test 
+
+
 
 pairs.panels(covid_subset1,
              smooth = TRUE, # If TRUE, draws loess smooths
@@ -435,7 +521,204 @@ corr1
 # total_deaths = continuous interval variable
 # diabetes_prevalence = categorical variable
 #-----------------------------------------------------------------------------------------------------------------#
+      
+# use statistical methods to examine 
+# the relationship between our variables of interest
+      
+      
+# creating a subset
+names(covid_data)      
+covid_subset4 <- subset(covid_data, select = c(iso_code, location, date, total_deaths, diabetes_prevalence))
+str(covid_subset4)
+sum(is.na(covid_subset4))  #18038
+dim(covid_subset4)         # 84529     5
+head(covid_subset4)                 
+      
+# Check for missing data
+incomplete_data <- covid_subset5[!complete.cases(covid_subset4),]
+incomplete_data
+nrow(incomplete_data)      #16377
+      
+# Install and use mice package to show
+# missing var in  the manager dataframe
+install.packages("mice")
+library(mice)
+md.pattern(covid_subset4)  
+         
+# Visualise the data for missing Vars
+# Use VIM Package to show missing vars
 
+install.packages("VIM")
+library(VIM)
+missing_values <- aggr(covid_subset4, prop = FALSE, numbers = TRUE)      
+     
+# Analysing the variables 
+# total_deaths = continuous interval variable
+# diabetes_prevalence = categorical nominal variable 
+
+
+#Check whether the variables you are using for the hypothesis test are normally
+#distributed or not. Do this visually and using a relevant statistical analysis test. 
+#Then decide on which statistical test you will use.      
+
+# ChecK linearity of the variables 
+attach(covid_subset4)
+plot(total_deaths, diabetes_prevalence, pch = 9, col= "lightblue", 
+     main = "comparision of total_deaths with diabetes_prevalence",
+     xlab = "total_deaths",
+     ylab = "diabetes_prevalence") 
+
+      
+#Visual analysis seems to indicate the data normally distributed
+#Summarize 
+tapply(total_deaths, diabetes_prevalence, median)
+
+# visualise the normality of the variables
+opar = par(no.readonly = TRUE)
+#arrange the plots in 1 rows by 2 cols
+par(mfrow = c(1,2))
+
+hist(total_deaths, col = "red", main = "dist of total_deaths" , xlab = "total_deaths")
+hist(diabetes_prevalence, col = "red", main = "dist of diabetes_prevalence")
+par = opar       
+      
+       
+#Quantile-quantile plot (Q-Q plot) allows us to check
+#if the data is normally distributed or not 
+
+#Is total_deaths normally distributed?
+with (covid_subset4, {qqnorm (total_deaths,
+                              main = "Normal QQ-plot of total_deaths data",
+                              xlab = "Theoritical Quantiles",
+                              ylab = "Samles Quantiles")})
+
+# Add line that represents normal distribution
+qqline(total_deaths, col = "red")
+# total_deaths appears not to be normally distributed
+
+#Is mpg normally distributed?
+with (covid_subset4, {qqnorm (diabetes_prevalence,
+                              main = "Normal QQ-plot of weight data",
+                              xlab = "Theoritical Quantiles",
+                              ylab = "Samles Quantiles")})
+# Add line that represents normal distribution
+qqline(diabetes_prevalence, col = "red")
+# diabetes_prevalence appears not to be normally distributed      
+      
+     
+# create a normal QQ-plot of weight and mpg values
+# we can examine the linear correlation
+# between both variables
+with (covid_subset4, {qqplot (total_deaths, diabetes_prevalence,
+                              main = "comparing total_deaths and cardiovasc_death_rate",
+                              xlab = "total_deaths",
+                              ylab = "cardiovasc_death_rate")})
+
+# we can run the formal test of normality
+#provided through the widely used shapiro-wilks test
+
+my_sample<-covid_subset4[sample(1:nrow(covid_subset4), 3, replace = FALSE),]
+my_sample
+
+normality_test <- shapiro.test(my_sample$total_deaths)
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is 
+# not normally distributed
+
+# In this example p-value= 0.02473123
+# 0.02473123 > 0.05 (False)
+# therefore the var wt is normally distributed
+
+# normality test for mpg
+normality_test <- shapiro.test(my_sample$diabetes_prevalence)
+normality_test$p.value
+# the p-value  = 0.7922128
+# 0.7922128 > 0.05 (True)
+# therefore the var diabetes_prevalence is normally distributed
+
+# Both vars are normally distributed
+# both Continuous
+# test = pearson
+
+# dependent var = mpg
+# Independent var = wt
+
+install.packages("psych")
+library(psych)
+
+
+my_sample1<-covid_subset4[sample(1:nrow(covid_subset4), 10000, replace = FALSE),]
+my_sample1
+
+pairs.panels(my_sample1,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals  
+
+
+
+
+cor.test(total_deaths, diabetes_prevalence, method = "pearson")  # not working
+wilcox.test(total_deaths~diabetes_prevalence)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = diabetes_prevalence, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant       
+      
+      
+      
+      
+      
+      
+      
+      
       
       
       
@@ -452,6 +735,201 @@ corr1
 # total_deaths = continuous interval variable
 # cardiovasc_death_rate = categorical variable
 #-------------------------------------------------------------------------------------------------------------------#
+      
+      
+# use statistical methods to examine 
+# the relationship between our variables of interest
+
+      
+# creating a subset
+names(covid_data)      
+covid_subset5 <- subset(covid_data, select = c(iso_code, location, date, total_deaths, cardiovasc_death_rate))
+str(covid_subset5)
+sum(is.na(covid_subset5))  #19157
+dim(covid_subset5)         # 84529     5
+head(covid_subset5)      
+
+# Check for missing data
+incomplete_data <- covid_subset5[!complete.cases(covid_subset5),]
+incomplete_data
+nrow(incomplete_data)      #16750
+      
+      
+# Install and use mice package to show
+# missing var in  the manager dataframe
+install.packages("mice")
+library(mice)
+md.pattern(covid_subset5)      
+      
+# Visualise the data for missing Vars
+# Use VIM Package to show missing vars
+
+install.packages("VIM")
+library(VIM)
+missing_values <- aggr(covid_subset5, prop = FALSE, numbers = TRUE)
+      
+
+# Analysing the variables 
+# total_deaths = continuous interval variable
+# cardiovasc_death_rate = categorical nominal variable 
+
+
+#Check whether the variables you are using for the hypothesis test are normally
+#distributed or not. Do this visually and using a relevant statistical analysis test. Then
+#decide on which statistical test you will use.      
+
+# ChecK linearity of the variables 
+attach(covid_subset5)
+plot(total_deaths, cardiovasc_death_rate, pch = 9, col= "lightblue", 
+     main = "comparision of total_deaths with cardiovasc_death_rate",
+     xlab = "total_deaths",
+     ylab = "cardiovasc_death_rate")
+
+#Visual analysis seems to indicate the data normally distributed
+#Summarize 
+tapply(total_deaths, cardiovasc_death_rate, median)
+
+# visualise the normality of the variables
+opar = par(no.readonly = TRUE)
+#arrange the plots in 1 rows by 2 cols
+par(mfrow = c(1,2))
+
+hist(total_deaths, col = "red", main = "dist of total_deaths" , xlab = "total_deaths")
+hist(cardiovasc_death_rate, col = "red", main = "dist of cardiovasc_death_rate")
+par = opar  
+      
+      
+#Quantile-quantile plot (Q-Q plot) allows us to check
+#if the data is normally distributed or not 
+
+#Is total_deaths normally distributed?
+with (covid_subset5, {qqnorm (total_deaths,
+                     main = "Normal QQ-plot of total_deaths data",
+                     xlab = "Theoritical Quantiles",
+                     ylab = "Samles Quantiles")})
+
+# Add line that represents normal distribution
+qqline(total_deaths, col = "red")
+# total_deaths appears not to be normally distributed
+
+#Is mpg normally distributed?
+with (covid_subset5, {qqnorm (cardiovasc_death_rate,
+                     main = "Normal QQ-plot of weight data",
+                     xlab = "Theoritical Quantiles",
+                     ylab = "Samles Quantiles")})
+# Add line that represents normal distribution
+qqline(cardiovasc_death_rate, col = "red")
+# cardiovasc_death_rate appears not to be normally distributed
+
+
+
+# create a normal QQ-plot of weight and mpg values
+# we can examine the linear correlation
+# between both variables
+with (covid_subset5, {qqplot (total_deaths, cardiovasc_death_rate,
+                     main = "comparing total_deaths and cardiovasc_death_rate",
+                     xlab = "total_deaths",
+                     ylab = "cardiovasc_death_rate")})
+
+# we can run the formal test of normality
+#provided through the widely used shapiro-wilks test
+
+normality_test <- shapiro.test(total_deaths)
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is 
+# not normally distributed
+
+# In this example p-value= 0.09265499
+# 0.09265499 > 0.05 (True)
+# therefore the var wt is normally distributed
+
+# normality test for mpg
+normality_test <- shapiro.test(cardiovasc_death_rate)
+normality_test$p.value
+# the p-value  = 0.1228814
+# 0.1228814 > 0.05 (True)
+# therefore the var mpg is normally distributed
+
+# Both vars are normally distributed
+# both Continuous
+# test = pearson
+
+# dependent var = mpg
+# Independent var = wt
+
+install.packages("psych")
+library(psych)
+
+
+pairs.panels(covid_subset5,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals  
+
+
+
+
+cor.test(total_deaths, cardiovasc_death_rate, method = "pearson")  # not working
+wilcox.test(total_deaths~cardiovasc_death_rate)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = cardiovasc_death_rate, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant 
+
+
+
+ 
+
+
+
+
       
       
       
