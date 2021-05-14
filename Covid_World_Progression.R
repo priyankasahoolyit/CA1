@@ -118,6 +118,47 @@ covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"),
 dim(covid_subset)
 
 
+covid_data[(covid_data$location=="Asia"),2] <- "Asia"
+covid_data[(covid_data$location=="Europe"),2] <- "Europe"
+covid_data[(covid_data$location=="Africa"),2] <- "Africa"
+covid_data[(covid_data$location=="North America"),2] <- "North America"
+covid_data[(covid_data$location=="South America"),2] <- "South America"
+covid_data[(covid_data$location=="Oceania"),2] <- "Oceania"
+sum(is.na(covid_data$continent))
+
+sum(is.na(covid_subset))
+
+
+asia_new_cases <- subset(covid_data, continent %in% c("Asia"), 
+                         select = c(iso_code, 
+                                    location, 
+                                    date,
+                                    continent,
+                                    people_fully_vaccinated, 
+                                    new_cases))
+dim(asia_new_cases)
+
+europe_new_cases <- subset(covid_data, continent %in% c("Europe"), 
+                         select = c(iso_code, 
+                                    location, 
+                                    date,
+                                    continent,
+                                    people_fully_vaccinated, 
+                                    new_cases))
+dim(europe_new_cases)
+
+
+asis_vs_europe_new <- c(asia_new_cases$new_cases, europe_new_cases$new_cases)
+dim(asis_vs_europe_new)
+
+
+covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"), 
+                      select = c(iso_code, 
+                                 location, 
+                                 date, 
+                                 people_fully_vaccinated, 
+                                 new_cases))
+
 
 # The variable `new_cases` are the counts of new confirmed cases of covid-19 reported daily, country wise. 
 # So it will not be wrong to consider the null values as no new cases in the country on particular date, 
@@ -938,6 +979,7 @@ pairs.panels(sample,
              smooth = TRUE, # If TRUE, draws loess smooths
              scale = FALSE, # If TRUE, scales the correlation text font    
              density = TRUE, # If TRUE, adds density plots and histograms    
+             
              ellipses = TRUE, # If TRUE, draws ellipses    
              method = "spearman",# Correlation method (also "pearson" or "kendall")    
              pch = 21, # pch symbol    
