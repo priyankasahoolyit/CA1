@@ -69,7 +69,6 @@ str(covid_data$date)
 
 final_df<-na.omit(covid_data)
 dim(final_df)
-final_df
 
 # It is observed that there are missing data in all the records, 
 # so na.omit() function is dropping all the rows from the data frame.
@@ -80,13 +79,12 @@ final_df
 # and `!` complete_cases() for missing_data accordingly.
 # Then using nrow() to show a total of all complete and missing rows
 
-complete_data<-covid_data[complete.cases(covid_data),]
-nrow(covid_data)
-missing_data<-covid_data[!complete.cases(covid_data),]
-nrow(covid_data)
-missing_rows<-nrow(complete_data) -nrow(missing_data)
-missing_rows
+complete_data <-covid_data[complete.cases(covid_data),]
+nrow(complete_data)
+missing_data <-covid_data[!complete.cases(covid_data),]
+nrow(missing_data)
 
+nrow(complete_data) - nrow(missing_data)
 # Here as well its evident that the none of the rows are complete out of 84529 observations. 
 
 
@@ -97,14 +95,13 @@ sum(is.na(covid_data))                     # Count of `NA` is 2009585
 names(which(sapply(covid_data, anyNA)))    # Almost all the variables contains `NA`, 
 
 
-
 # -------------------------- Data Subsetting and Imputing ---------------------------------------------#
 
 # Let's create a subset of covid_data, 
 # considering the information required for further Hypothesis testing.
 
 # Using the subset function to extract all records 
-# from covid_data where age > 35 or age < 24. and only select the listed attributes
+# from covid_data and only select the listed attributes for Europe
 
 
 attach(covid_data)
@@ -128,7 +125,7 @@ sum(is.na(covid_data$continent))
 
 sum(is.na(covid_subset))
 
-
+#====================================================================================
 asia_new_cases <- subset(covid_data, continent %in% c("Asia"), 
                          select = c(iso_code, 
                                     location, 
@@ -151,6 +148,8 @@ dim(europe_new_cases)
 asis_vs_europe_new <- c(asia_new_cases$new_cases, europe_new_cases$new_cases)
 dim(asis_vs_europe_new)
 
+asis_vs_europe_new <- merge(asia_new_cases,europe_new_cases)
+#==============================================================================
 
 covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"), 
                       select = c(iso_code, 
@@ -295,7 +294,7 @@ pairs.panels(covid_subset1,
              stars = TRUE, # If TRUE, adds significance level with stars    
              ci = TRUE) # If TRUE, adds confidence intervals   
 
-
+#0.62***
 # Need to decide a test for calulating p-value
 #Pearson’s Correlation Coefficient 
 #Spearman’s Correlation Coefficient (also use for ordinal data) 
@@ -305,10 +304,28 @@ corr1 <- cor.test(x=covid_subset1$people_fully_vaccinated,
                  y=covid_subset1$new_cases, method = 'spearman')
 corr1
 
+#Spearman's rank correlation rho
+
+#data:  covid_subset1$people_fully_vaccinated and covid_subset1$new_cases
+#S = 1.1918e+10, p-value < 2.2e-16
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+     # rho 
+#0.6220994 
 corr2 <- cor.test(x=covid_subset1$people_fully_vaccinated, 
                  y=covid_subset1$new_cases, method = 'pearson')
 corr2
 
+#Pearson's product-moment correlation
+
+#data:  covid_subset1$people_fully_vaccinated and covid_subset1$new_cases
+#t = 67.996, df = 5739, p-value < 2.2e-16
+#alternative hypothesis: true correlation is not equal to 0
+#95 percent confidence interval:
+ #0.6533829 0.6820448
+#sample estimates:
+ #     cor 
+#0.6679615 
 
 
 #----------------------------------------- Research Question 2 ----------------------------------------------#
@@ -785,6 +802,7 @@ t.test(x = diabetes_prevalence, alternative = "greater")
 # creating a subset
 names(covid_data)      
 covid_subset5 <- subset(covid_data, select = c(iso_code, location, date, total_deaths, cardiovasc_death_rate))
+
 str(covid_subset5)
 sum(is.na(covid_subset5))  #19157
 dim(covid_subset5)         # 84529     5
