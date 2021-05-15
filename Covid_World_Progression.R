@@ -37,7 +37,7 @@ nrow(covid_data)                         # Count the number of rows within the c
 
 
 
-# ------------------------------ Raw Data Visualization -----------------------------------------------#
+# ------------------------------------- Raw Data Visualization -----------------------------------------------#
 
 
 Deaths<-aggregate(covid_data$total_deaths~covid_data$location,covid_data,FUN = max)
@@ -50,7 +50,7 @@ barplot(Deaths10$`covid_data$total_deaths`,names.arg = Deaths10$`covid_data$loca
 
 
 
-#------------------------------ Data Preparation -----------------------------------------------#
+#-------------------------------------------- Data Preparation -----------------------------------------------#
 
 # Structure displays that there are total 84529 observations and 59 variables in the Covid dataset.
 # Already all the string variables are converted to Factors while reading the data into dataframe. 
@@ -60,9 +60,18 @@ barplot(Deaths10$`covid_data$total_deaths`,names.arg = Deaths10$`covid_data$loca
 covid_data$date <- as.Date(covid_data$date)
 str(covid_data$date)
 
+# There are some values in `location` field which is a continent not a country
+# Hence, filling the `continent` field with values from `location` its a continent name.
+covid_data[(covid_data$location=="Asia"),2] <- "Asia"
+covid_data[(covid_data$location=="Europe"),2] <- "Europe"
+covid_data[(covid_data$location=="Africa"),2] <- "Africa"
+covid_data[(covid_data$location=="North America"),2] <- "North America"
+covid_data[(covid_data$location=="South America"),2] <- "South America"
+covid_data[(covid_data$location=="Oceania"),2] <- "Oceania"
+sum(is.na(covid_data$continent))
 
 
-# ------------------------  Identifying the missing values---------------------------#
+# ---------------------------------------- Identifying the missing values------------------------------------#
 
 # Lets find out if there are any NA's in the data
 # Using na.omit() to store any full rows into new_data frame
@@ -95,7 +104,8 @@ sum(is.na(covid_data))                     # Count of `NA` is 2009585
 names(which(sapply(covid_data, anyNA)))    # Almost all the variables contains `NA`, 
 
 
-# -------------------------- Data Subsetting and Imputing ---------------------------------------------#
+# --------------------------------- Data Subsetting and Imputing ---------------------------------------------#
+#------------------------------------------ Data Analysis ------------------------------------------------------#
 
 # Let's create a subset of covid_data, 
 # considering the information required for further Hypothesis testing.
@@ -105,27 +115,8 @@ names(which(sapply(covid_data, anyNA)))    # Almost all the variables contains `
 
 
 attach(covid_data)
-names(covid_data)
-covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"), 
-                      select = c(iso_code, 
-                                 location, 
-                                 date, 
-                                 people_fully_vaccinated, 
-                                 new_cases))
-dim(covid_subset)
 
-
-covid_data[(covid_data$location=="Asia"),2] <- "Asia"
-covid_data[(covid_data$location=="Europe"),2] <- "Europe"
-covid_data[(covid_data$location=="Africa"),2] <- "Africa"
-covid_data[(covid_data$location=="North America"),2] <- "North America"
-covid_data[(covid_data$location=="South America"),2] <- "South America"
-covid_data[(covid_data$location=="Oceania"),2] <- "Oceania"
-sum(is.na(covid_data$continent))
-
-sum(is.na(covid_subset))
-
-#====================================================================================
+#=====================================================================================================
 asia_new_cases <- subset(covid_data, continent %in% c("Asia"), 
                          select = c(iso_code, 
                                     location, 
@@ -148,15 +139,18 @@ dim(europe_new_cases)
 asis_vs_europe_new <- c(asia_new_cases$new_cases, europe_new_cases$new_cases)
 dim(asis_vs_europe_new)
 
-asis_vs_europe_new <- merge(asia_new_cases,europe_new_cases)
-#==============================================================================
+#asis_vs_europe_new <- merge(asia_new_cases,europe_new_cases)
 
-covid_subset <-subset(covid_data, continent %in% c("Asia","Europe"), 
-                      select = c(iso_code, 
-                                 location, 
-                                 date, 
-                                 people_fully_vaccinated, 
-                                 new_cases))
+#asis_vs_europe_new
+#dim(asia_new_cases)
+#dim(europe_new_cases)
+asis_vs_europe_new <- rbind(asia_new_cases, europe_new_cases)
+
+#table(asis_vs_europe_new$continent, asis_vs_europe_new$new_cases)
+tapply(asis_vs_europe_new$continent, asis_vs_europe_new$new_cases, sum)
+#str(asis_vs_europe_new)
+names(which(sapply(asis_vs_europe_new, anyNA)))
+#==========================================================================================================
 
 
 # The variable `new_cases` are the counts of new confirmed cases of covid-19 reported daily, country wise. 
@@ -173,21 +167,28 @@ covid_data$people_fully_vaccinated[is.na(covid_data$people_fully_vaccinated)] <-
 covid_data$people_fully_vaccinated
 
 
-#-------------------------------------- Hypothesis testing --------------------------------------#
+#------------------------------------------------- Hypothesis testing --------------------------------------#
 
-# Research Question 1: Effect of the vaccine on New cases
-# H0 : There is no correlation between people_fully_vaccinated and new_cases
-# H1 : There is correlation between people_fully_vaccinated and new_cases
+# Research Question 1: Is there any correlation between people_fully_vaccinated and new_cases in Europe?
+# H0 : There is no correlation between people_fully_vaccinated and new_cases in Europe.
+# H1 : There is correlation between people_fully_vaccinated and new_cases in Europe.
 
 # Analyzing the variables used in null and alternate hypothesis
 # people_fully_vaccinated = continuous interval variable
 # new_cases = continuous interval variable
-#------------------------------------------------------------------------------------------------#
+
+#-----------------------------------------------------------------------------------------------------------#
 
 # creating a subset of covid_data for convenient hypothesis testing
 
-covid_subset <- subset(covid_data, select = c(iso_code, location, date, people_fully_vaccinated, new_cases))
+attach(covid_data)
+names(covid_data)
+
+covid_subset <- subset(covid_data, continent %in% c("Europe"),
+                       select = c(iso_code, location, date, people_fully_vaccinated, new_cases))
 str(covid_subset)
+head(covid_subset)
+dim(covid_subset)
 sum(is.na(covid_subset))
 
 # Data cleaning for subset of data is now completed with no missing values. 
@@ -198,7 +199,9 @@ covid_new <- covid_subset %>% group_by(date, location) %>%
 summarize(people_fully_vaccinated = sum(people_fully_vaccinated), new_cases = sum(new_cases)) 
 head(covid_new)
 
-
+# Check for missing data
+incomplete_data <- covid_subset[!complete.cases(covid_subset),]
+nrow(incomplete_data)
 
 #Using mice library to display NA values and its count
 md.pattern(covid_subset)
@@ -209,20 +212,15 @@ missing_values <- aggr(covid_subset, prop = FALSE, numbers = TRUE)
 # show summary of the content of missing_values 
 summary(missing_values)
 
-#----------------------------------------------------
+# ----------------------------------------------- Linearity check --------------------------------------------------------------#
 
-
-#Check whether the variables you are using for the hypothesis test are normally
-#distributed or not. Do this visually and using a relevant statistical analysis test. Then
-#decide on which statistical test you will use.
+# Check whether the variables used for the hypothesis test are normally distributed or not. 
+# Doing this visually and using a relevant statistical analysis test. 
+# Then decide on which statistical test you will use.
 
 # ChecK linearity of the variables 
 
 attach(covid_subset)
-options(scipen = 999)
-ggplot(covid_subset, aes(x=people_fully_vaccinated,y=new_cases))+ geom_point(col="lightblue", size=3)
-
-
 
 plot(people_fully_vaccinated, new_cases, pch = 9, col= "lightblue",
      main = "comparision of people_fully_vaccinated with new_cases",
@@ -230,18 +228,39 @@ plot(people_fully_vaccinated, new_cases, pch = 9, col= "lightblue",
      ylab = "new_cases")
 
 
+options(scipen = 999)
+ggplot(covid_subset, aes(x=people_fully_vaccinated,y=new_cases))+ geom_point(col="lightblue", size=3)
+
+
+# plotting histograms to view if the variables are normally Distributed 
+
+#arrange the plots in 1 rows by 2 cols
+opar = par(no.readonly = TRUE)
+par(mfrow = c(1,2))
+par = opar
+
+hist(people_fully_vaccinated, col = "cyan", main = "dist of people_fully_vaccinated" , xlab = "people_fully_vaccinated in Europe")
+hist(new_cases, col = "cyan", main = "dist of new_cases in Europe")
+
 #Visual analysis seems to indicate the data normally distributed
 #Summarize the
 tapply(people_fully_vaccinated, new_cases, median)
 
-#------------------------ Data Analysis ------------------------------------#
+# we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
+with (covid_subset, {qqplot (people_fully_vaccinated,new_cases,
+                             main = "comparing people_fully_vaccinated and new_cases",
+                             xlab = "people_fully_vaccinated",
+                             ylab = "new_cases")})
 
 
-#Quantile-quantile plot (Q-Q plot) allows us to check
-#if the data is normally distributed or not 
+# Using Quantile-quantile plot (Q-Q plot) allows us to check
+# if the data is normally distributed or not 
 
 #Is people_fully_vaccinated normally distributed?
-qqnorm(people_fully_vaccinated)
+with (covid_subset, {qqnorm (people_fully_vaccinated,
+                     main = "Normal QQ-plot of people_fully_vaccinated",
+                     xlab = "Theoritical Quantiles",
+                     ylab = "Samples Quantiles")})
 # Add line that represents normal distribution
 qqline(people_fully_vaccinated, col = "red")
 # people_fully_vaccinated appears not to be normally distributed
@@ -249,37 +268,55 @@ qqline(people_fully_vaccinated, col = "red")
 
 #Is new_cases normally distributed?
 qqnorm(new_cases)
+
+with (covid_subset, {qqnorm (new_cases,
+                             main = "Normal QQ-plot of new_cases",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+
 # Add line that represents normal distribution
 qqline(new_cases, col = "red")
 # new_cases appears not to be normally distributed
 
 
-# This test doesnt work on dicotomous variable
-with(beavers_data, tapply(temp, activ, shapiro.test))
+# ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
+# we can run the formal test of normality provided through the widely used
+# shapiro-wilks test
 
-covid_subset1 <- subset(covid_subset, select = c(people_fully_vaccinated, new_cases))
-str(covid_subset1)
-sum(is.na(covid_subset1))
-
-
-# This test doesnt work on dicotomous variable
-
-
-my_sample<- covid_subset[sample(1:nrow(covid_subset), 100, replace = FALSE),]
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
 my_sample
 
-my_sample <- covid_subset1[sample(1:10, 10, replace=FALSE),]
-my_sample
+# normality test for people_fully_vaccinated
+normality_test <- shapiro.test(my_sample$people_fully_vaccinated)
+normality_test$p.value
+
+#
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.000000000000000000000005501516
+# 0.000000000000000000000005501516 > 0.05 (False)
+# Therefore the var people_fully_vaccinated is not normally distributed
+
+# normality test for new_cases
+normality_test <- shapiro.test(my_sample$new_cases)
+normality_test$p.value
+
+# 
 
 
-with(my_sample, tapply(people_fully_vaccinated, new_cases, shapiro.test))
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
 
-#Error in FUN(X[[i]], ...) : sample size must be between 3 and 5000
-# put a random sample of 5000 or less then do Shapiro test 
+# In this example p-value= 0.00000000000000000000000000000000000000000000000000003300901
+# 0.00000000000000000000000000000000000000000000000000003300901 > 0.05 (False)
+# Therefore the var new_cases is not normally distributed
 
 
-
-pairs.panels(covid_subset1,
+pairs.panels(covid_subset,
              smooth = TRUE, # If TRUE, draws loess smooths
              scale = FALSE, # If TRUE, scales the correlation text font    
              density = TRUE, # If TRUE, adds density plots and histograms    
@@ -296,12 +333,13 @@ pairs.panels(covid_subset1,
 
 #0.62***
 # Need to decide a test for calulating p-value
-#Pearson’s Correlation Coefficient 
-#Spearman’s Correlation Coefficient (also use for ordinal data) 
+# Here both variables are continuous but the dependent variable is not normally distributed. 
+# Hence going for a non parametric test i.e. 
+# Spearman’s Correlation Coefficient (also use for ordinal data) 
 
 
-corr1 <- cor.test(x=covid_subset1$people_fully_vaccinated, 
-                 y=covid_subset1$new_cases, method = 'spearman')
+corr1 <- cor.test(x=covid_subset$people_fully_vaccinated, 
+                 y=covid_subset$new_cases, method = 'spearman')
 corr1
 
 #Spearman's rank correlation rho
@@ -312,20 +350,694 @@ corr1
 #sample estimates:
      # rho 
 #0.6220994 
-corr2 <- cor.test(x=covid_subset1$people_fully_vaccinated, 
-                 y=covid_subset1$new_cases, method = 'pearson')
-corr2
 
-#Pearson's product-moment correlation
 
-#data:  covid_subset1$people_fully_vaccinated and covid_subset1$new_cases
-#t = 67.996, df = 5739, p-value < 2.2e-16
-#alternative hypothesis: true correlation is not equal to 0
-#95 percent confidence interval:
- #0.6533829 0.6820448
+#----------------------------------------- Research Question 2 ----------------------------------------------#
+# Research Question 2: Is there any link between covid total death cases and diabetes in India?
+
+# H0: There is no link between covid total death cases and diabetes in India.
+# H1: There is link between covid total death cases and diabetes in India.
+
+# Analyzing the variables used in each variable
+# total_deaths = continuous interval variable
+# diabetes_prevalence = categorical variable, represented as proportions
+
+#--------------------------------------------------------------------------------------------------------------#
+
+
+# use statistical methods to examine 
+# the relationship between our variables of interest
+
+# creating a subset of covid_data for convenient hypothesis testing
+
+attach(covid_data)
+names(covid_data)
+
+covid_subset <- subset(covid_data, location %in% c("India"),
+                       select = c(iso_code, location, date, total_deaths, diabetes_prevalence))
+str(covid_subset)
+head(covid_subset)
+dim(covid_subset)
+sum(is.na(covid_subset))
+
+# Check for missing data
+incomplete_data <- covid_subset[!complete.cases(covid_subset),]
+nrow(incomplete_data)
+
+#Using mice library to display NA values and its count
+md.pattern(covid_subset)
+
+# Using VIM library and displayed the missing values
+missing_values <- aggr(covid_subset, prop = FALSE, numbers = TRUE)
+
+# show summary of the content of missing_values 
+summary(missing_values)
+
+# ----------------------------------------------- Linearity check --------------------------------------------------------------#
+
+# Check whether the variables used for the hypothesis test are normally distributed or not. 
+# Doing this visually and using a relevant statistical analysis test. 
+# Then decide on which statistical test you will use.
+
+# ChecK linearity of the variables 
+
+attach(covid_subset)
+
+plot(total_deaths, diabetes_prevalence, pch = 9, col= "lightblue",
+     main = "comparision of total_deaths with diabetes_prevalence",
+     xlab = "total_deaths",
+     ylab = "diabetes_prevalence")
+
+
+options(scipen = 999)
+ggplot(covid_subset, aes(x=total_deaths,y=diabetes_prevalence))+ geom_point(col="lightblue", size=3)
+
+
+# we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
+with (covid_subset, {qqplot (total_deaths, diabetes_prevalence,
+                             main = "comparing total_deaths and diabetes_prevalence",
+                             xlab = "total_deaths",
+                             ylab = "diabetes_prevalence")})
+
+# Also using psych library to get correlation coefficient between the 2 variables
+covid_corr <- subset(covid_subset,
+                       select = c(total_deaths, diabetes_prevalence))
+head(covid_corr)
+dim(covid_corr)
+pairs.panels(covid_corr,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals   
+
+# NA
+
+# plotting histograms to view if the variables are normally Distributed 
+
+#arrange the plots in 1 rows by 2 cols
+opar = par(no.readonly = TRUE)
+par(mfrow = c(1,2))
+par = opar
+
+hist(total_deaths, col = "cyan", main = "dist of total_deaths" , 
+     xlab = "total_deaths in India")
+hist(diabetes_prevalence, col = "cyan", main = "dist of diabetes_prevalence in India")
+
+
+# Using Quantile-quantile plot (Q-Q plot) allows us to check
+# if the data is normally distributed or not 
+
+#Is people_fully_vaccinated normally distributed?
+with (covid_subset, {qqnorm (total_deaths,
+                             main = "Normal QQ-plot of total_deaths",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+# Add line that represents normal distribution
+qqline(people_fully_vaccinated, col = "red")
+# people_fully_vaccinated appears not to be normally distributed
+
+
+#Is new_cases normally distributed?
+qqnorm(new_cases)
+
+with (covid_subset, {qqnorm (diabetes_prevalence,
+                             main = "Normal QQ-plot of diabetes_prevalence",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+
+# Add line that represents normal distribution
+qqline(new_cases, col = "red")
+# new_cases appears not to be normally distributed
+
+
+# ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
+# we can run the formal test of normality provided through the widely used
+# shapiro-wilks test
+
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample
+
+# normality test for people_fully_vaccinated
+normality_test <- shapiro.test(my_sample$total_deaths)
+normality_test$p.value
+
+#
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.000000000000000000000005501516
+# 0.000000000000000000000005501516 > 0.05 (False)
+# Therefore the var people_fully_vaccinated is not normally distributed
+
+# normality test for new_cases
+normality_test <- shapiro.test(my_sample$diabetes_prevalence)
+normality_test$p.value
+
+# 
+
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.00000000000000000000000000000000000000000000000000003300901
+# 0.00000000000000000000000000000000000000000000000000003300901 > 0.05 (False)
+# Therefore the var new_cases is not normally distributed
+
+
+# Need to decide a test for calulating p-value
+# Here both variables are continuous but the dependent variable is not normally distributed. 
+# Hence going for a non parametric test i.e. 
+# Spearman’s Correlation Coefficient (also use for ordinal data) 
+
+
+corr1 <- cor.test(x=covid_subset$total_deaths, 
+                  y=covid_subset$diabetes_prevalence, method = 'spearman')
+corr1
+
+#Spearman's rank correlation rho
+
+#data:  covid_subset$total_deaths and covid_subset$diabetes_prevalence
+#S = NA, p-value = NA
+#alternative hypothesis: true rho is not equal to 0
 #sample estimates:
- #     cor 
-#0.6679615 
+#rho 
+# NA 
+
+
+
+
+cor.test(total_deaths, cardiovasc_death_rate, method = "pearson")  # not working
+wilcox.test(total_deaths~cardiovasc_death_rate)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = cardiovasc_death_rate, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant 
+
+
+detach(covid_subset)
+
+
+
+#----------------------------------------- Research Question 3 ----------------------------------------------#
+# Research Question 3: Does hand-washing facilities affect new cases numbers in America?
+
+# H0: The hand-washing facilities does not affect new cases numbers in America
+# H1: The hand-washing facilities affect new cases numbers in America
+
+# Analyzing the variables used in each variable
+# handwashing_facilities = continuous interval variable
+# new_cases = categorical variable, represented as proportions
+
+#--------------------------------------------------------------------------------------------------------------#
+
+
+# Using statistical methods to examine the relationship between our variables of interest
+# creating a subset of covid_data for convenient hypothesis testing
+
+attach(covid_data)
+names(covid_data)
+
+covid_subset <- subset(covid_data, continent %in% c("South America", "North America"),
+                       select = c(iso_code, location, date, handwashing_facilities, new_cases))
+str(covid_subset)
+head(covid_subset)
+dim(covid_subset)
+sum(is.na(covid_subset))
+
+# Check for missing data
+incomplete_data <- covid_subset[!complete.cases(covid_subset),]
+nrow(incomplete_data)
+
+#Using mice library to display NA values and its count
+md.pattern(covid_subset)
+
+# Using VIM library and displayed the missing values
+missing_values <- aggr(covid_subset, prop = FALSE, numbers = TRUE)
+
+# show summary of the content of missing_values 
+summary(missing_values)
+
+# ----------------------------------------------- Linearity check --------------------------------------------------------------#
+
+# Check whether the variables used for the hypothesis test are normally distributed or not. 
+# Doing this visually and using a relevant statistical analysis test. 
+# Then decide on which statistical test you will use.
+
+# ChecK linearity of the variables 
+
+attach(covid_subset)
+
+plot(handwashing_facilities, new_cases, pch = 9, col= "lightblue",
+     main = "comparision of handwashing_facilities with new_cases",
+     xlab = "handwashing_facilities",
+     ylab = "new_cases")
+
+
+options(scipen = 999)
+ggplot(covid_subset, aes(x=total_deaths,y=diabetes_prevalence))+ geom_point(col="lightblue", size=3)
+
+
+# we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
+with (covid_subset, {qqplot (handwashing_facilities, new_cases,
+                             main = "comparing handwashing_facilities and new_cases",
+                             xlab = "handwashing_facilities",
+                             ylab = "new_cases")})
+
+# Also using psych library to get correlation coefficient between the 2 variables
+covid_corr <- subset(covid_subset,
+                     select = c(handwashing_facilities, new_cases))
+head(covid_corr)
+dim(covid_corr)
+
+pairs.panels(covid_corr,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals   
+
+# NA
+
+# plotting histograms to view if the variables are normally Distributed 
+
+#arrange the plots in 1 rows by 2 cols
+opar = par(no.readonly = TRUE)
+par(mfrow = c(1,2))
+par = opar
+
+hist(total_deaths, col = "cyan", main = "distribution of handwashing_facilities" , 
+     xlab = "handwashing_facilities in America")
+hist(new_cases, col = "cyan", main = "distribution of new_cases",
+     xlab = "new_cases in America")
+
+
+# Using Quantile-quantile plot (Q-Q plot) allows us to check
+# if the data is normally distributed or not 
+
+#Is handwashing_facilities normally distributed?
+with (covid_subset, {qqnorm (handwashing_facilities,
+                             main = "Normal QQ-plot of handwashing_facilities",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+# Add line that represents normal distribution
+qqline(handwashing_facilities, col = "red")
+# handwashing_facilities appears not to be normally distributed
+
+
+#Is new_cases normally distributed?
+with (covid_subset, {qqnorm (new_cases,
+                             main = "Normal QQ-plot of new_cases",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+
+# Add line that represents normal distribution
+qqline(new_cases, col = "red")
+# new_cases appears not to be normally distributed
+
+
+# ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
+# we can run the formal test of normality provided through the widely used
+# shapiro-wilks test
+
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample
+
+# normality test for people_fully_vaccinated
+normality_test <- shapiro.test(my_sample$handwashing_facilities )
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.000000000000000000000000000000000000000000000000000000000000000005161857
+# 0.000000000000000000000000000000000000000000000000000000000000000005161857 > 0.05 (False)
+# Therefore the var handwashing_facilities is not normally distributed
+
+# normality test for new_cases
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
+my_sample
+
+normality_test <- shapiro.test(my_sample$new_cases)
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.00000000000000000000000000000000000000000000000009848756
+# 0.00000000000000000000000000000000000000000000000009848756 > 0.05 (False)
+# Therefore the var new_cases is not normally distributed
+
+
+# Need to decide a test for calulating p-value
+# Here, one variable is continuous and other is categorical.
+# The dependent variable is not normally distributed. 
+# Hence going for a non parametric test i.e. 
+# Spearman’s Correlation Coefficient (also use for ordinal data) 
+
+
+corr1 <- cor.test(x=covid_subset$handwashing_facilities, 
+                  y=covid_subset$new_cases, method = 'spearman')
+corr1
+#Spearman's rank correlation rho
+
+#data:  covid_subset$handwashing_facilities and covid_subset$new_cases
+#S = 97638246692, p-value < 0.00000000000000022
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#       rho 
+#-0.2142961 
+
+
+
+
+cor.test(total_deaths, cardiovasc_death_rate, method = "pearson")  # not working
+wilcox.test(handwashing_facilities~new_cases)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = cardiovasc_death_rate, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant 
+
+
+
+detach(covid_subset)
+
+
+
+#----------------------------------------- Research Question 4 ----------------------------------------------#
+# Research Question 4: Does hand-washing facilities affect new cases numbers in America?
+
+# H0: The hand-washing facilities does not affect new cases numbers in America
+# H1: The hand-washing facilities affect new cases numbers in America
+
+# Analyzing the variables used in each variable
+# handwashing_facilities = continuous interval variable
+# new_cases = categorical variable, represented as proportions
+
+#--------------------------------------------------------------------------------------------------------------#
+
+
+# Using statistical methods to examine the relationship between our variables of interest
+# creating a subset of covid_data for convenient hypothesis testing
+
+attach(covid_data)
+names(covid_data)
+
+covid_subset <- subset(covid_data, continent %in% c("South America", "North America"),
+                       select = c(iso_code, location, date, handwashing_facilities, new_cases))
+str(covid_subset)
+head(covid_subset)
+dim(covid_subset)
+sum(is.na(covid_subset))
+
+# Check for missing data
+incomplete_data <- covid_subset[!complete.cases(covid_subset),]
+nrow(incomplete_data)
+
+#Using mice library to display NA values and its count
+md.pattern(covid_subset)
+
+# Using VIM library and displayed the missing values
+missing_values <- aggr(covid_subset, prop = FALSE, numbers = TRUE)
+
+# show summary of the content of missing_values 
+summary(missing_values)
+
+# ----------------------------------------------- Linearity check --------------------------------------------------------------#
+
+# Check whether the variables used for the hypothesis test are normally distributed or not. 
+# Doing this visually and using a relevant statistical analysis test. 
+# Then decide on which statistical test you will use.
+
+# ChecK linearity of the variables 
+
+attach(covid_subset)
+
+plot(handwashing_facilities, new_cases, pch = 9, col= "lightblue",
+     main = "comparision of handwashing_facilities with new_cases",
+     xlab = "handwashing_facilities",
+     ylab = "new_cases")
+
+
+options(scipen = 999)
+ggplot(covid_subset, aes(x=total_deaths,y=diabetes_prevalence))+ geom_point(col="lightblue", size=3)
+
+
+# we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
+with (covid_subset, {qqplot (handwashing_facilities, new_cases,
+                             main = "comparing handwashing_facilities and new_cases",
+                             xlab = "handwashing_facilities",
+                             ylab = "new_cases")})
+
+# Also using psych library to get correlation coefficient between the 2 variables
+covid_corr <- subset(covid_subset,
+                     select = c(handwashing_facilities, new_cases))
+head(covid_corr)
+dim(covid_corr)
+
+pairs.panels(covid_corr,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals   
+
+# NA
+
+# plotting histograms to view if the variables are normally Distributed 
+
+#arrange the plots in 1 rows by 2 cols
+opar = par(no.readonly = TRUE)
+par(mfrow = c(1,2))
+par = opar
+
+hist(total_deaths, col = "cyan", main = "distribution of handwashing_facilities" , 
+     xlab = "handwashing_facilities in America")
+hist(new_cases, col = "cyan", main = "distribution of new_cases",
+     xlab = "new_cases in America")
+
+
+# Using Quantile-quantile plot (Q-Q plot) allows us to check
+# if the data is normally distributed or not 
+
+#Is handwashing_facilities normally distributed?
+with (covid_subset, {qqnorm (handwashing_facilities,
+                             main = "Normal QQ-plot of handwashing_facilities",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+# Add line that represents normal distribution
+qqline(handwashing_facilities, col = "red")
+# handwashing_facilities appears not to be normally distributed
+
+
+#Is new_cases normally distributed?
+with (covid_subset, {qqnorm (new_cases,
+                             main = "Normal QQ-plot of new_cases",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+
+# Add line that represents normal distribution
+qqline(new_cases, col = "red")
+# new_cases appears not to be normally distributed
+
+
+# ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
+# we can run the formal test of normality provided through the widely used
+# shapiro-wilks test
+
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample
+
+# normality test for people_fully_vaccinated
+normality_test <- shapiro.test(my_sample$handwashing_facilities )
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.000000000000000000000000000000000000000000000000000000000000000005161857
+# 0.000000000000000000000000000000000000000000000000000000000000000005161857 > 0.05 (False)
+# Therefore the var handwashing_facilities is not normally distributed
+
+# normality test for new_cases
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
+my_sample
+
+normality_test <- shapiro.test(my_sample$new_cases)
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.00000000000000000000000000000000000000000000000009848756
+# 0.00000000000000000000000000000000000000000000000009848756 > 0.05 (False)
+# Therefore the var new_cases is not normally distributed
+
+
+# Need to decide a test for calulating p-value
+# Here, one variable is continuous and other is categorical.
+# The dependent variable is not normally distributed. 
+# Hence going for a non parametric test i.e. 
+# Spearman’s Correlation Coefficient (also use for ordinal data) 
+
+
+corr1 <- cor.test(x=covid_subset$handwashing_facilities, 
+                  y=covid_subset$new_cases, method = 'spearman')
+corr1
+#Spearman's rank correlation rho
+
+#data:  covid_subset$handwashing_facilities and covid_subset$new_cases
+#S = 97638246692, p-value < 0.00000000000000022
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#       rho 
+#-0.2142961 
+
+
+
+
+cor.test(total_deaths, cardiovasc_death_rate, method = "pearson")  # not working
+wilcox.test(handwashing_facilities~new_cases)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = cardiovasc_death_rate, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant 
+
+
+
 
 
 #----------------------------------------- Research Question 2 ----------------------------------------------#
@@ -1032,5 +1744,21 @@ pairs.panels(sample,
              ci = TRUE) # If TRUE, adds confidence intervals        
       
       
-      
+
+=============================================================================================
+
+corr2 <- cor.test(x=covid_subset1$people_fully_vaccinated, 
+                  y=covid_subset1$new_cases, method = 'pearson')
+corr2
+
+#Pearson's product-moment correlation
+
+#data:  covid_subset1$people_fully_vaccinated and covid_subset1$new_cases
+#t = 67.996, df = 5739, p-value < 2.2e-16
+#alternative hypothesis: true correlation is not equal to 0
+#95 percent confidence interval:
+#0.6533829 0.6820448
+#sample estimates:
+#     cor 
+#0.6679615     
       
