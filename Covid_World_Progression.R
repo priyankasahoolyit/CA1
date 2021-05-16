@@ -814,14 +814,15 @@ detach(covid_subset)
 
 
 #----------------------------------------- Research Question 4 ----------------------------------------------#
-# Research Question 4: Does hand-washing facilities affect new cases numbers in America?
+# Research Question 4: Is there any link between life expectancy at birth in 2019 
+# and human development index?
 
-# H0: The hand-washing facilities does not affect new cases numbers in America
-# H1: The hand-washing facilities affect new cases numbers in America
+# H0: Covid does not affect life expectancy at birth in 2019 and human_development_index
+# H1: Covid-19 affect life expectancy at birth in 2019 and human_development_index
 
 # Analyzing the variables used in each variable
-# handwashing_facilities = continuous interval variable
-# new_cases = categorical variable, represented as proportions
+# life_expectancy = continuous interval variable
+# human_development_index = categorical nominal variable, represented as proportions
 
 #--------------------------------------------------------------------------------------------------------------#
 
@@ -832,8 +833,8 @@ detach(covid_subset)
 attach(covid_data)
 names(covid_data)
 
-covid_subset <- subset(covid_data, continent %in% c("South America", "North America"),
-                       select = c(iso_code, location, date, handwashing_facilities, new_cases))
+covid_subset <- subset(covid_data, 
+                       select = c(iso_code, location, date, life_expectancy, human_development_index))
 str(covid_subset)
 head(covid_subset)
 dim(covid_subset)
@@ -862,10 +863,10 @@ summary(missing_values)
 
 attach(covid_subset)
 
-plot(handwashing_facilities, new_cases, pch = 9, col= "lightblue",
-     main = "comparision of handwashing_facilities with new_cases",
-     xlab = "handwashing_facilities",
-     ylab = "new_cases")
+plot(life_expectancy, human_development_index, pch = 9, col= "lightblue",
+     main = "comparision of life_expectancy with human_development_index",
+     xlab = "life_expectancy",
+     ylab = "human_development_index")
 
 
 options(scipen = 999)
@@ -873,18 +874,22 @@ ggplot(covid_subset, aes(x=total_deaths,y=diabetes_prevalence))+ geom_point(col=
 
 
 # we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
-with (covid_subset, {qqplot (handwashing_facilities, new_cases,
-                             main = "comparing handwashing_facilities and new_cases",
-                             xlab = "handwashing_facilities",
-                             ylab = "new_cases")})
+with (covid_subset, {qqplot (life_expectancy, human_development_index,
+                             main = "comparing life_expectancy and human_development_index",
+                             xlab = "life_expectancy",
+                             ylab = "human_development_index")})
 
 # Also using psych library to get correlation coefficient between the 2 variables
 covid_corr <- subset(covid_subset,
-                     select = c(handwashing_facilities, new_cases))
+                     select = c(life_expectancy, human_development_index))
 head(covid_corr)
 dim(covid_corr)
 
-pairs.panels(covid_corr,
+my_sample<-covid_corr[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample
+
+
+pairs.panels(my_sample,
              smooth = TRUE, # If TRUE, draws loess smooths
              scale = FALSE, # If TRUE, scales the correlation text font    
              density = TRUE, # If TRUE, adds density plots and histograms    
@@ -899,8 +904,8 @@ pairs.panels(covid_corr,
              stars = TRUE, # If TRUE, adds significance level with stars    
              ci = TRUE) # If TRUE, adds confidence intervals   
 
-# NA
 
+# 0.92***
 # plotting histograms to view if the variables are normally Distributed 
 
 #arrange the plots in 1 rows by 2 cols
@@ -908,76 +913,306 @@ opar = par(no.readonly = TRUE)
 par(mfrow = c(1,2))
 par = opar
 
-hist(total_deaths, col = "cyan", main = "distribution of handwashing_facilities" , 
-     xlab = "handwashing_facilities in America")
-hist(new_cases, col = "cyan", main = "distribution of new_cases",
-     xlab = "new_cases in America")
+hist(total_deaths, col = "cyan", main = "distribution of life_expectancy" , 
+     xlab = "life_expectancy")
+hist(new_cases, col = "cyan", main = "distribution of human_development_index",
+     xlab = "human_development_index")
 
 
 # Using Quantile-quantile plot (Q-Q plot) allows us to check
 # if the data is normally distributed or not 
 
-#Is handwashing_facilities normally distributed?
-with (covid_subset, {qqnorm (handwashing_facilities,
-                             main = "Normal QQ-plot of handwashing_facilities",
+#Islife_expectancy normally distributed?
+with (covid_subset, {qqnorm (life_expectancy,
+                             main = "Normal QQ-plot of life_expectancy",
                              xlab = "Theoritical Quantiles",
                              ylab = "Samples Quantiles")})
 # Add line that represents normal distribution
-qqline(handwashing_facilities, col = "red")
-# handwashing_facilities appears not to be normally distributed
+qqline(life_expectancy, col = "red")
+# life_expectancy appears not to be normally distributed
 
 
-#Is new_cases normally distributed?
-with (covid_subset, {qqnorm (new_cases,
-                             main = "Normal QQ-plot of new_cases",
+#Is human_development_index normally distributed?
+with (covid_subset, {qqnorm (human_development_index,
+                             main = "Normal QQ-plot of human_development_index",
                              xlab = "Theoritical Quantiles",
                              ylab = "Samples Quantiles")})
 
 # Add line that represents normal distribution
 qqline(new_cases, col = "red")
-# new_cases appears not to be normally distributed
+# human_development_index appears not to be normally distributed
 
 
 # ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
 # we can run the formal test of normality provided through the widely used
 # shapiro-wilks test
 
-my_sample<-covid_subset[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
 my_sample
 
-# normality test for people_fully_vaccinated
-normality_test <- shapiro.test(my_sample$handwashing_facilities )
+# normality test for life_expectancy
+normality_test <- shapiro.test(my_sample$life_expectancy )
 normality_test$p.value
 
 #p-value tells us  the chance  that the sample 
 # comes form a normal distribution
 # if p < 0.05 the variable is not normally distributed
 
-# In this example p-value= 0.000000000000000000000000000000000000000000000000000000000000000005161857
-# 0.000000000000000000000000000000000000000000000000000000000000000005161857 > 0.05 (False)
-# Therefore the var handwashing_facilities is not normally distributed
+# In this example p-value= 0.0000000000000009363117
+# 0.0000000000000009363117 > 0.05 (False)
+# Therefore the var life_expectancy is not normally distributed
 
 # normality test for new_cases
 my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
 my_sample
 
-normality_test <- shapiro.test(my_sample$new_cases)
+normality_test <- shapiro.test(my_sample$human_development_index)
 normality_test$p.value
 
 #p-value tells us  the chance  that the sample 
 # comes form a normal distribution
 # if p < 0.05 the variable is not normally distributed
 
-# In this example p-value= 0.00000000000000000000000000000000000000000000000009848756
-# 0.00000000000000000000000000000000000000000000000009848756 > 0.05 (False)
-# Therefore the var new_cases is not normally distributed
+# In this example p-value= 0.0000000000000001671074
+# 0.0000000000000001671074 > 0.05 (False)
+# Therefore the var human_development_index is not normally distributed
 
 
 # Need to decide a test for calulating p-value
-# Here, one variable is continuous and other is categorical.
+# Here, both the variablea are categorical nominal.
 # The dependent variable is not normally distributed. 
 # Hence going for a non parametric test i.e. 
-# Spearman’s Correlation Coefficient (also use for ordinal data) 
+# Chi-squared test 
+
+
+corr1 <- cor.test(x=covid_subset$handwashing_facilities, 
+                  y=covid_subset$new_cases, method = 'spearman')
+corr1
+#Spearman's rank correlation rho
+
+#data:  covid_subset$handwashing_facilities and covid_subset$new_cases
+#S = 97638246692, p-value < 0.00000000000000022
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#       rho 
+#-0.2142961 
+
+
+
+
+cor.test(total_deaths, cardiovasc_death_rate, method = "pearson")  # not working
+wilcox.test(handwashing_facilities~new_cases)  # not working
+
+t.test(x = total_deaths, alternative = "greater")
+#One Sample t-test
+
+#data:  total_deaths
+#t = 45.665, df = 72834, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   21945.48      Inf
+#sample estimates:
+#   mean of x 
+#22765.51 
+
+
+
+
+t.test(x = cardiovasc_death_rate, alternative = "greater")
+
+#One Sample t-test
+
+#data:  cardiovasc_death_rate
+#t = 602.51, df = 77065, p-value < 2.2e-16
+#alternative hypothesis: true mean is greater than 0
+#95 percent confidence interval:
+#   257.043     Inf
+#sample estimates:
+#   mean of x 
+#257.7466 
+
+
+# pearson correlation = -0.8676594
+# p-value = 2.2e-16
+# cut off = 0.05 
+
+# 2.2e-16 < 0.05  (true)
+# reject null/accept alternative
+#hence reject H0 and accept H1
+# there is significant 
+
+
+detach(covid_data)
+
+#----------------------------------------- Research Question 5 ----------------------------------------------#
+# Research Question 5: Does Stringency Index  impacted the new cases in Ireland?
+
+# H0: Stringency Index does not impact the new cases in Ireland.
+# H1: Stringency Index impacts the new cases in Ireland.
+
+# Analyzing the variables used in each variable
+# stringency_index = continuous interval variable
+# new_cases = categorical nominal variable, represented as proportions
+
+#--------------------------------------------------------------------------------------------------------------#
+
+
+# Using statistical methods to examine the relationship between our variables of interest
+# creating a subset of covid_data for convenient hypothesis testing
+
+attach(covid_data)
+names(covid_data)
+
+covid_subset <- subset(covid_data, 
+                       select = c(iso_code, location, date, stringency_index, new_cases))
+str(covid_subset)
+head(covid_subset)
+dim(covid_subset)
+sum(is.na(covid_subset))
+
+# Check for missing data
+incomplete_data <- covid_subset[!complete.cases(covid_subset),]
+nrow(incomplete_data)
+
+#Using mice library to display NA values and its count
+md.pattern(covid_subset)
+
+# Using VIM library and displayed the missing values
+missing_values <- aggr(covid_subset, prop = FALSE, numbers = TRUE)
+
+# show summary of the content of missing_values 
+summary(missing_values)
+
+# ----------------------------------------------- Linearity check --------------------------------------------------------------#
+
+# Check whether the variables used for the hypothesis test are normally distributed or not. 
+# Doing this visually and using a relevant statistical analysis test. 
+# Then decide on which statistical test you will use.
+
+# ChecK linearity of the variables 
+
+attach(covid_subset)
+
+plot(life_expectancy, human_development_index, pch = 9, col= "lightblue",
+     main = "comparision of life_expectancy with human_development_index",
+     xlab = "life_expectancy",
+     ylab = "human_development_index")
+
+
+options(scipen = 999)
+ggplot(covid_subset, aes(x=total_deaths,y=diabetes_prevalence))+ geom_point(col="lightblue", size=3)
+
+
+# we can also examine the linear correlation between both variables using Quantile-quantile plot (Q-Q plot)
+with (covid_subset, {qqplot (life_expectancy, human_development_index,
+                             main = "comparing life_expectancy and human_development_index",
+                             xlab = "life_expectancy",
+                             ylab = "human_development_index")})
+
+# Also using psych library to get correlation coefficient between the 2 variables
+covid_corr <- subset(covid_subset,
+                     select = c(life_expectancy, human_development_index))
+head(covid_corr)
+dim(covid_corr)
+
+my_sample<-covid_corr[sample(1:nrow(covid_subset), 10000, replace = FALSE),]
+my_sample
+
+
+pairs.panels(my_sample,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals   
+
+
+# 0.92***
+# plotting histograms to view if the variables are normally Distributed 
+
+#arrange the plots in 1 rows by 2 cols
+opar = par(no.readonly = TRUE)
+par(mfrow = c(1,2))
+par = opar
+
+hist(total_deaths, col = "cyan", main = "distribution of life_expectancy" , 
+     xlab = "life_expectancy")
+hist(new_cases, col = "cyan", main = "distribution of human_development_index",
+     xlab = "human_development_index")
+
+
+# Using Quantile-quantile plot (Q-Q plot) allows us to check
+# if the data is normally distributed or not 
+
+#Islife_expectancy normally distributed?
+with (covid_subset, {qqnorm (life_expectancy,
+                             main = "Normal QQ-plot of life_expectancy",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+# Add line that represents normal distribution
+qqline(life_expectancy, col = "red")
+# life_expectancy appears not to be normally distributed
+
+
+#Is human_development_index normally distributed?
+with (covid_subset, {qqnorm (human_development_index,
+                             main = "Normal QQ-plot of human_development_index",
+                             xlab = "Theoritical Quantiles",
+                             ylab = "Samples Quantiles")})
+
+# Add line that represents normal distribution
+qqline(new_cases, col = "red")
+# human_development_index appears not to be normally distributed
+
+
+# ------------------------------------------ shapiro-wilks test ---------------------------------------------------#
+# we can run the formal test of normality provided through the widely used
+# shapiro-wilks test
+
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
+my_sample
+
+# normality test for life_expectancy
+normality_test <- shapiro.test(my_sample$life_expectancy )
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.0000000000000009363117
+# 0.0000000000000009363117 > 0.05 (False)
+# Therefore the var life_expectancy is not normally distributed
+
+# normality test for new_cases
+my_sample<-covid_subset[sample(1:nrow(covid_subset), 1000, replace = FALSE),]
+my_sample
+
+normality_test <- shapiro.test(my_sample$human_development_index)
+normality_test$p.value
+
+#p-value tells us  the chance  that the sample 
+# comes form a normal distribution
+# if p < 0.05 the variable is not normally distributed
+
+# In this example p-value= 0.0000000000000001671074
+# 0.0000000000000001671074 > 0.05 (False)
+# Therefore the var human_development_index is not normally distributed
+
+
+# Need to decide a test for calulating p-value
+# Here, both the variablea are categorical nominal.
+# The dependent variable is not normally distributed. 
+# Hence going for a non parametric test i.e. 
+# Chi-squared test 
 
 
 corr1 <- cor.test(x=covid_subset$handwashing_facilities, 
@@ -1038,124 +1273,8 @@ t.test(x = cardiovasc_death_rate, alternative = "greater")
 
 
 
-
-
-#----------------------------------------- Research Question 2 ----------------------------------------------#
-
-# Research Question 2: Older people are more likely to die from covid-19
-# In  other words, death due to Covid is higher for those aged more than 70?
-  
-# H0: There is no correlation between death cases due to covid-19 and older people having age >= 70 
-# H1: There is no correlation between death cases due to covid-19 and older people having age >= 70
-
-# Analyzing the variables used in each variable
-# total_deaths = continuous interval variable
-# aged_70_older = categorical variable, represented as proportions
-#--------------------------------------------------------------------------------------------------------------#
-
-
-
-covid_data$total_deaths[is.na(covid_data$total_deaths)] <- 0
-covid_data$total_deaths
-covid_data$aged_70_older[is.na(covid_data$aged_70_older)] <- 0
-covid_data$aged_70_older
-
-
-covid_subset2 <- subset(covid_data, select = c(total_deaths, aged_70_older))
-covid_subset2
-
-
-#Using mice library to display NA values and its count
-md.pattern(covid_subset2)
-
-# Installed VIM package and displayed the missing values
-missing_values <- aggr(covid_subset2, prop = FALSE, numbers = TRUE)
-
-# show summary of the content of missing_values 
-summary(missing_values)
-
-#----------------------------------------------------
-
-
-#Check whether the variables you are using for the hypothesis test are normally
-#distributed or not. Do this visually and using a relevant statistical analysis test. Then
-#decide on which statistical test you will use.
-
-# ChecK linearity of the variables 
-
-attach(covid_subset2)
-
-#options(scipen = 999)
-ggplot(covid_subset2, aes(x=total_deaths,y=aged_70_older))+ geom_point(col="lightblue", size=3)
-
-
-
-plot(new_deaths, diabetes_prevalence, pch = 9, col= "lightblue",
-   main = "comparision of total_deaths with aged_70_older",
-   xlab = "total_deaths",
-   ylab = "aged_70_older")
-
-
-#Visual analysis seems to indicate the data normally distributed
-#Summarize the
-tapply(total_deaths, aged_70_older, median)
-
-#------------------------ Data Analysis ------------------------------------#
-
-
-#Quantile-quantile plot (Q-Q plot) allows us to check
-#if the data is normally distributed or not 
-
-
-#Is new_cases normally distributed?
-qqnorm(total_deaths)
-# Add line that represents normal distribution
-qqline(total_deaths, col = "red")
-# total_deaths appears not to be normally distributed
-
-#Is diabetes_prevalence normally distributed?
-qqnorm(aged_70_older)
-# Add line that represents normal distribution
-qqline(aged_70_older, col = "red")
-# diabetes_prevalence appears not to be normally distributed
-
-
-
-pairs.panels(covid_subset2,
-             smooth = TRUE, # If TRUE, draws loess smooths
-             scale = FALSE, # If TRUE, scales the correlation text font    
-             density = TRUE, # If TRUE, adds density plots and histograms    
-             ellipses = TRUE, # If TRUE, draws ellipses    
-             method = "spearman",# Correlation method (also "pearson" or "kendall")    
-             pch = 21, # pch symbol    
-             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
-             cor = TRUE, # If TRUE, reports correlations    
-             jiggle = FALSE, # If TRUE, data points are jittered    
-             factor = 2, # Jittering factor    
-             hist.col = 4, # Histograms color    
-             stars = TRUE, # If TRUE, adds significance level with stars    
-             ci = TRUE) # If TRUE, adds confidence intervals   
-
-
-# Need to decide a test for calculating p-value
-# Here , we have dependent variable is continuous and normally distributed
-# and Independent variable is categorical 
-# Hence, Spearman test could be a good fit, b
-
-??Whitney
-
-
-wilcox.test(total_deaths~aged_70_older)  # Not working
-
-
-corr1 <- cor.test(x=covid_subset2$total_deaths, 
-                  y=covid_subset2$aged_70_older, method = 'spearman')
-corr1
-
-
-
-#-------------------------------------------- Research Question 3 -------------------------------------------------#
-# Research Question 3: Does GDP per capita is impacted by population_density of a country
+#-------------------------------------------- Research Question 6 -------------------------------------------------#
+# Research Question 6: Does GDP per capita is impacted by population_density of a country
 
 # H0 : GDP per capita is not impacted by population of a country 
 # H1 : GDP per capita is impacted by population of a country 
@@ -1271,7 +1390,7 @@ corr1
 #S = 75994205022682, p-value < 0.00000000000000022
 #alternative hypothesis: true rho is not equal to 0
 #sample estimates:
-      rho 
+rho 
 #0.2450564 
 
 #_______________________________________________________________
@@ -1279,10 +1398,121 @@ corr1
 
 
 
+#----------------------------------------- Research Question 7 ----------------------------------------------#
+
+# Research Question 7: Older people are more likely to die from covid-19
+# In  other words, death due to Covid is higher for those aged more than 70?
+  
+# H0: There is no correlation between death cases due to covid-19 and older people having age >= 70 
+# H1: There is no correlation between death cases due to covid-19 and older people having age >= 70
+
+# Analyzing the variables used in each variable
+# total_deaths = continuous interval variable
+# aged_70_older = categorical variable, represented as proportions
+#--------------------------------------------------------------------------------------------------------------#
 
 
-#-------------------------------------------- Research Question 4 -------------------------------------------------#
-#Research Question 3: Does covid affect diabetic patients
+
+covid_data$total_deaths[is.na(covid_data$total_deaths)] <- 0
+covid_data$total_deaths
+covid_data$aged_70_older[is.na(covid_data$aged_70_older)] <- 0
+covid_data$aged_70_older
+
+
+covid_subset2 <- subset(covid_data, select = c(total_deaths, aged_70_older))
+covid_subset2
+
+
+#Using mice library to display NA values and its count
+md.pattern(covid_subset2)
+
+# Installed VIM package and displayed the missing values
+missing_values <- aggr(covid_subset2, prop = FALSE, numbers = TRUE)
+
+# show summary of the content of missing_values 
+summary(missing_values)
+
+#----------------------------------------------------
+
+
+#Check whether the variables you are using for the hypothesis test are normally
+#distributed or not. Do this visually and using a relevant statistical analysis test. Then
+#decide on which statistical test you will use.
+
+# ChecK linearity of the variables 
+
+attach(covid_subset2)
+
+#options(scipen = 999)
+ggplot(covid_subset2, aes(x=total_deaths,y=aged_70_older))+ geom_point(col="lightblue", size=3)
+
+
+
+plot(new_deaths, diabetes_prevalence, pch = 9, col= "lightblue",
+   main = "comparision of total_deaths with aged_70_older",
+   xlab = "total_deaths",
+   ylab = "aged_70_older")
+
+
+#Visual analysis seems to indicate the data normally distributed
+#Summarize the
+tapply(total_deaths, aged_70_older, median)
+
+#------------------------ Data Analysis ------------------------------------#
+
+
+#Quantile-quantile plot (Q-Q plot) allows us to check
+#if the data is normally distributed or not 
+
+
+#Is new_cases normally distributed?
+qqnorm(total_deaths)
+# Add line that represents normal distribution
+qqline(total_deaths, col = "red")
+# total_deaths appears not to be normally distributed
+
+#Is diabetes_prevalence normally distributed?
+qqnorm(aged_70_older)
+# Add line that represents normal distribution
+qqline(aged_70_older, col = "red")
+# diabetes_prevalence appears not to be normally distributed
+
+
+
+pairs.panels(covid_subset2,
+             smooth = TRUE, # If TRUE, draws loess smooths
+             scale = FALSE, # If TRUE, scales the correlation text font    
+             density = TRUE, # If TRUE, adds density plots and histograms    
+             ellipses = TRUE, # If TRUE, draws ellipses    
+             method = "spearman",# Correlation method (also "pearson" or "kendall")    
+             pch = 21, # pch symbol    
+             lm = FALSE, # If TRUE, plots linear fit rather than the LOESS (smoothed) fit    
+             cor = TRUE, # If TRUE, reports correlations    
+             jiggle = FALSE, # If TRUE, data points are jittered    
+             factor = 2, # Jittering factor    
+             hist.col = 4, # Histograms color    
+             stars = TRUE, # If TRUE, adds significance level with stars    
+             ci = TRUE) # If TRUE, adds confidence intervals   
+
+
+# Need to decide a test for calculating p-value
+# Here , we have dependent variable is continuous and normally distributed
+# and Independent variable is categorical 
+# Hence, Spearman test could be a good fit, b
+
+??Whitney
+
+
+wilcox.test(total_deaths~aged_70_older)  # Not working
+
+
+corr1 <- cor.test(x=covid_subset2$total_deaths, 
+                  y=covid_subset2$aged_70_older, method = 'spearman')
+corr1
+
+
+#-------------------------------------------- Research Question 8 -------------------------------------------------#
+#Research Question 8: Does covid affect diabetic patients
       
 # H0 : There is no correlation between total_deaths and diabetes_prevalence 
 # H1 : There is correlation between total_deaths and diabetes_prevalence 
@@ -1481,12 +1711,6 @@ t.test(x = diabetes_prevalence, alternative = "greater")
 # reject null/accept alternative
 #hence reject H0 and accept H1
 # there is significant       
-      
-      
-      
-      
-      
-      
       
       
       
@@ -1699,6 +1923,9 @@ t.test(x = cardiovasc_death_rate, alternative = "greater")
  
 
 #======================================================= The End =======================================================#
+# =========================== Rough Work
+
+
 names(covid_data)      
 covid_subset10 <- subset(covid_data, select = c(population, life_expectancy, human_development_index, diabetes_prevalence, cardiovasc_death_rate))
 
